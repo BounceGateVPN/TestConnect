@@ -7,28 +7,30 @@ import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.drafts.Draft;
 import org.java_websocket.handshake.ServerHandshake;
 
+import com.github.smallru8.driver.tuntap.Analysis;
 import com.github.smallru8.driver.tuntap.TapDevice;
-import com.github.smallru8.driver.tuntap.TunTap;
 
 public class Client extends WebSocketClient {
 
 	TapDevice td = new TapDevice();
+	String tuntapIP = "192.168.87.2";
 
 	public Client(URI serverUri, Draft draft) {
 		super(serverUri, draft);
+		System.out.println(TapDevice.tap.tuntap_set_ip(tuntapIP, 24));
 		td.startEthernetDev();
-		System.out.println(td.tap.tuntap_set_ip("192.168.87.1", 24));
-		td.tap.tuntap_up();
 	}
 
 	public Client(URI serverURI) {
 		super(serverURI);
-		System.out.println(td.tap.tuntap_set_ip("192.168.87.1", 24));
-		td.tap.tuntap_up();
+		System.out.println(TapDevice.tap.tuntap_set_ip(tuntapIP, 24));
+		td.startEthernetDev();
 	}
-	public byte[]  tuntap_read(int len) {
-		return td.tap.tuntap_read(len);
+
+	public byte[] tuntap_read(int len) {
+		return TapDevice.tap.tuntap_read(len);
 	}
+
 	@Override
 	public void onOpen(ServerHandshake handshakedata) {
 		// TODO Auto-generated method stub
@@ -40,13 +42,22 @@ public class Client extends WebSocketClient {
 		// TODO Auto-generated method stub
 		System.out.println("received: " + message);
 	}
-	
+
 	@Override
 	public void onMessage(ByteBuffer message) {
+		if (!message.hasRemaining())
+			return;
 		byte[] data = new byte[message.remaining()];
 		message.get(data, 0, data.length);
-		td.tap.tuntap_write(data, data.length);
-		System.out.println("recv bytes");
+
+		Analysis analysis = new Analysis();
+		analysis.setFramePacket(data);
+		System.out.println(String.format("onMessage len:%d", data.length));
+		String des_addr = addrConvert(analysis.getDesIPaddress());
+		if (this.tuntapIP.equals(des_addr)) {
+			TapDevice.tap.tuntap_write(data, data.length);
+			System.out.println("recv bytes");
+		}
 	}
 
 	@Override
@@ -62,4 +73,21 @@ public class Client extends WebSocketClient {
 		ex.printStackTrace();
 	}
 
+	@Override
+	public void send(byte[] data) {
+		Analysis analysis = new Analysis();
+		analysis.setFramePacket(data);
+		String src_addr = addrConvert(analysis.getSrcIPaddress());
+		if (this.tuntapIP.equals(src_addr))
+			super.send(data);
+	}
+
+	private String addrConvert(int addr) {
+		String str_addr = "";
+		str_addr += String.valueOf(addr >> 24 & 0xFF) + ".";
+		str_addr += String.valueOf(addr >> 16 & 0xFF) + ".";
+		str_addr += String.valueOf(addr >> 8 & 0xFF) + ".";
+		str_addr += String.valueOf(addr & 0xFF);
+		return str_addr;
+	}
 }
