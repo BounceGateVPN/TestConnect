@@ -17,6 +17,7 @@ public class Server extends WebSocketServer {
 	Map<String, WebSocket> clients = new HashMap<String, WebSocket>();
 	TapDevice td = new TapDevice();
 	String tuntapIP = "192.168.87.1";
+	MACAddressTable MACAddresstable = new MACAddressTable();
 
 	public Server(int port) throws UnknownHostException {
 		super(new InetSocketAddress(port));
@@ -35,7 +36,6 @@ public class Server extends WebSocketServer {
 	@Override
 	public void onOpen(WebSocket conn, ClientHandshake handshake) {
 		System.out.println(conn.getRemoteSocketAddress().getAddress().getHostAddress() + " connected!");
-		String cli_addr = conn.getRemoteSocketAddress().getAddress().getHostAddress();
 	}
 
 	public byte[] tuntap_read(int len) {
@@ -44,16 +44,18 @@ public class Server extends WebSocketServer {
 
 	@Override
 	public void onClose(WebSocket conn, int code, String reason, boolean remote) {
-		// TODO Auto-generated method stub
-		System.out.println(conn.getRemoteSocketAddress().getAddress().getHostAddress() + ":"
-				+ conn.getRemoteSocketAddress().getPort() + " disconnected!");
+		MACAddresstable.remove(conn);
+		System.out.println("Disconnect!");
 	}
 
 	@Override
 	public void onMessage(WebSocket conn, String message) {
 		System.out.println(conn + ": " + message);
-		String send_cli_addr = conn.getRemoteSocketAddress().getAddress().getHostAddress() + ":"
-				+ conn.getRemoteSocketAddress().getPort();
+		/*
+		 * String send_cli_addr =
+		 * conn.getRemoteSocketAddress().getAddress().getHostAddress() + ":" +
+		 * conn.getRemoteSocketAddress().getPort();
+		 */
 
 		WebSocket client = clients.get(message);
 		if (client != null) {
@@ -62,52 +64,29 @@ public class Server extends WebSocketServer {
 	}
 
 	public void onMessage(WebSocket conn, ByteBuffer message) {
-		/*
-		 * String send_cli_addr =
-		 * conn.getRemoteSocketAddress().getAddress().getHostAddress() + ":" +
-		 * conn.getRemoteSocketAddress().getPort();
-		 */
 
 		byte[] data = new byte[message.remaining()];
 		message.get(data, 0, data.length);
 
-		Analysis analysis = new Analysis();
-		analysis.setFramePacket(data);
+		WebSocket client = MACAddresstable.analysisPacket(data, conn);
+		if (client == null) { // 在MAC Address Table找不到
+			Analysis analysis = new Analysis();
+			analysis.setFramePacket(data);
+			String des_addr = addrConvert(analysis.getDesIPaddress());
 
-		String des_addr = addrConvert(analysis.getDesIPaddress());
-		String src_addr = addrConvert(analysis.getSrcIPaddress());
-
-		if (analysis.packetType() == 0x06) { // ARP
-			if (clients.get(src_addr) == null) {
-				clients.put(src_addr, conn);
-			}
-			if (!this.tuntapIP.equals(des_addr) && clients.get(des_addr) == null) {
-				super.broadcast(data);
-				System.out.println("broadcast");
-				return;
-			}
-		}
-
-		System.out.println(String.format("src_addr: %s des_addr: %s", src_addr, des_addr));
-		if (this.tuntapIP.equals(des_addr)) {
-			TapDevice.tap.tuntap_write(data, data.length);
-			System.out.println("send to host");
+			if (this.tuntapIP.equals(des_addr)) { // 目的IP為本機
+				TapDevice.tap.tuntap_write(data, data.length);
+				System.out.println("send to host");
+			} else
+				this.broadcast(data);
 		} else {
-			WebSocket client = clients.get(des_addr);
-			if (client == null)
-				return;
 			client.send(data);
-			System.out.println("retransmiss to client" + client.getRemoteSocketAddress().getAddress());
 		}
-
-		/*
-		 * WebSocket client = clients.get(new String(message.array())); if (client !=
-		 * null) { client.send("from " + send_cli_addr); }
-		 */
 	}
 
 	@Override
 	public void onError(WebSocket conn, Exception ex) {
+		System.out.println("Error!!");
 		ex.printStackTrace();
 		if (conn != null) {
 			// some errors like port binding failed may not be assignable to a specific
@@ -134,13 +113,12 @@ public class Server extends WebSocketServer {
 	public void send(byte[] message) {
 		Analysis analysis = new Analysis();
 		analysis.setFramePacket(message);
-		String des_addr = addrConvert(analysis.getDesIPaddress());
-		WebSocket client = clients.get(des_addr);
+		byte[] desMAC = analysis.getFrameDesMACAddr();
+		WebSocket client = MACAddresstable.searchSessionByMAC(desMAC);
 
 		if (client != null) {
 			client.send(message);
-			System.out.println(String.format("send to des_addr: %s", des_addr));
-		} else if (client == null && analysis.packetType() == 0x06) {// ARP
+		} else if (client == null) {
 			super.broadcast(message);
 		}
 	}
