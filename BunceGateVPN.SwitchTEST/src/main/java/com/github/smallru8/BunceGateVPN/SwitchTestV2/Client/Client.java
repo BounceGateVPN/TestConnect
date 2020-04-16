@@ -18,14 +18,17 @@ public class Client {
 		String remoteIP = "ws://"+IP+":"+port;
 		WS ws_client = new WS(new URI(remoteIP));
 		ws_client.connectBlocking();
+		if(td.tap.osType)
+			td.tap.tuntap_startReadWrite();//Windows才要
 		while (true) {
 			byte[] buffer = td.read(1500);
-			System.out.println("Send to server : "+buffer.length+" bytes.");
 			if (buffer != null) {
+				System.out.println("Send to server : "+buffer.length+" bytes.");
 				if(td.tap.osType)
 					td.tap.tuntap_startReadWrite();//Windows才要
 				ws_client.send(buffer);
 			}
+			
 		}
 	}
 	

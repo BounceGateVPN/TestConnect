@@ -18,7 +18,6 @@ public class WS extends WebSocketServer{
 		// TODO Auto-generated method stub
 		
 		System.out.println(conn.getRemoteSocketAddress().getAddress().getHostAddress() + " connected!");
-		
 		//註冊此session
 		Server.sessionLs.newSession(conn);
 	}
@@ -26,13 +25,13 @@ public class WS extends WebSocketServer{
 	@Override
 	public void onClose(WebSocket conn, int code, String reason, boolean remote) {
 		// TODO Auto-generated method stub
-		
+		System.out.println(conn.getRemoteSocketAddress().getAddress().getHostAddress() + " closed!");
 	}
 
 	@Override
 	public void onMessage(WebSocket conn, String message) {
 		// TODO Auto-generated method stub
-		
+		System.out.println("GET String");
 	}
 	
 	@Override
@@ -46,7 +45,7 @@ public class WS extends WebSocketServer{
 	@Override
 	public void onError(WebSocket conn, Exception ex) {
 		// TODO Auto-generated method stub
-		
+		System.out.println("Error : "+ex);
 	}
 
 	@Override

@@ -34,7 +34,6 @@ public class SessionManager {
 		/*
 		 * 這裡之後要驗證
 		 * */
-				
 		sessions.get(hashcode).sendToVirtualDevice(data);
 	}
 	

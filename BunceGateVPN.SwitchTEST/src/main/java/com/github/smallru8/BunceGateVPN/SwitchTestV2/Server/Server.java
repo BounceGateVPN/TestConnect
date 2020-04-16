@@ -3,6 +3,8 @@ package com.github.smallru8.BunceGateVPN.SwitchTestV2.Server;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
+import org.java_websocket.server.WebSocketServer;
+
 import com.github.smallru8.BounceGateVPN.Switch.VirtualSwitch;
 
 public class Server {
@@ -24,8 +26,8 @@ public class Server {
 	public void start(String IP,int port) {
 		
 		//啟動WS server開始監聽
-		WS ws_server = new WS(new InetSocketAddress(IP, port));
-		ws_server.start();
+		WebSocketServer ws_server = new WS(new InetSocketAddress(IP, port));
+		ws_server.run();
 		System.out.println("WS server started on port : " + ws_server.getPort());
 	}
 	
