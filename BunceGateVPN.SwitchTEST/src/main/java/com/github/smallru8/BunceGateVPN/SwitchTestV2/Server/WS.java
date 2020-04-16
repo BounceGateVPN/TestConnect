@@ -40,6 +40,7 @@ public class WS extends WebSocketServer{
 		
 		//送到Switch
 		Server.sessionLs.sendMsgtoSwitch(conn.hashCode(), message.array());
+		System.out.println("Recv from client : "+message.array().length+" bytes.");
 	}
 
 	@Override
@@ -51,7 +52,7 @@ public class WS extends WebSocketServer{
 	@Override
 	public void onStart() {
 		// TODO Auto-generated method stub
-		
+		System.out.println("Server start.");
 	}
 
 }
