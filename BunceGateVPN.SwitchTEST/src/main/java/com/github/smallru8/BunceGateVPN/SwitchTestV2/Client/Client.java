@@ -24,8 +24,6 @@ public class Client {
 			byte[] buffer = td.read(1500);
 			if (buffer != null) {
 				System.out.println("Send to server : "+buffer.length+" bytes.");
-				if(td.tap.osType)
-					td.tap.tuntap_startReadWrite();//Windows才要
 				ws_client.send(buffer);
 			}
 			
