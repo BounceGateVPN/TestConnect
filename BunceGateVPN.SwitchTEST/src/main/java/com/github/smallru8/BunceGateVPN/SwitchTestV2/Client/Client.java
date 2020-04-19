@@ -8,6 +8,7 @@ import com.github.smallru8.driver.tuntap.TapDevice;
 public class Client {
 
 	public static TapDevice td;
+	public EventLoopThread elt;
 	
 	public Client() {
 		td = new TapDevice();
@@ -18,8 +19,10 @@ public class Client {
 		String remoteIP = "ws://"+IP+":"+port;
 		WS ws_client = new WS(new URI(remoteIP));
 		ws_client.connectBlocking();
-		if(td.tap.osType)
-			td.tap.tuntap_startReadWrite();//Windows才要
+		if(td.tap.osType) {
+			elt = new EventLoopThread(td.tap);
+			elt.start();
+		}
 		while (true) {
 			byte[] buffer = td.read(1500);
 			if (buffer != null) {
