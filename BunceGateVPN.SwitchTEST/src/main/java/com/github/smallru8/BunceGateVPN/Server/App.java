@@ -8,6 +8,7 @@ import java.net.URISyntaxException;
 import com.github.smallru8.BounceGateVPN.Switch.VirtualSwitch;
 import com.github.smallru8.driver.tuntap.TapDevice;
 
+
 /**
  * L2 switch 多對多測試
  * @author smallru8
@@ -35,14 +36,14 @@ public class App
     		System.out.println("WS server started on port : " + ws_server.getPort());
     	}else if(args[0].equalsIgnoreCase("-c")){//client
     		String remoteIP = "ws://"+args[1]+":8787";
+    		String tuntap_IP = args[2];
     		Client ws_client = new Client(new URI(remoteIP));
+    		td.tap.tuntap_set_ip(tuntap_IP, 24);
     		ws_client.connectBlocking();
     		while (true) {
     			byte[] buffer = td.read(1500);
     			System.out.println("Send to server : "+buffer.length+" bytes.");
     			if (buffer != null) {
-    				if(td.tap.osType)
-    					td.tap.tuntap_startReadWrite();//Windows才要
     				ws_client.send(buffer);
     			}
     		}
